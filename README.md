@@ -32,6 +32,20 @@ uvicorn main:app --reload
 - API: `http://127.0.0.1:8000`
 - Swagger UI: `http://127.0.0.1:8000/docs`
 
+### Logging
+
+Application logs go to stdout with this format:
+
+```
+2026-06-10 14:00:00 | INFO | routers.youtube | Parse request received: url=...
+```
+
+Set log verbosity with the `LOG_LEVEL` environment variable (default: `INFO`):
+
+```bash
+LOG_LEVEL=DEBUG uvicorn main:app --reload
+```
+
 ## API
 
 ### Health check
