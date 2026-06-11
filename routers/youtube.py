@@ -4,7 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from schemas.youtube import ParseYouTubeRequest, ParseYouTubeResponse
-from services.youtube_parser import YouTubeParseError, parse_youtube_url
+from services.youtube_parser import YouTubeParseError, is_youtube_url, parse_youtube_url
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,13 @@ async def parse_youtube(request: ParseYouTubeRequest) -> ParseYouTubeResponse:
     if not url:
         logger.warning("Parse request rejected: empty URL")
         raise HTTPException(status_code=400, detail="URL is required")
+
+    if not is_youtube_url(url):
+        logger.warning("Parse request rejected: invalid YouTube URL: %s", url)
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid YouTube URL. Only YouTube video, music, or shorts URLs are supported."
+        )
 
     logger.info("Parse request received: url=%s", url)
 

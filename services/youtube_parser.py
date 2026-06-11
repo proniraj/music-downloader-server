@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Any
 
 import yt_dlp
@@ -20,6 +21,19 @@ YDL_OPTS = {
 
 class YouTubeParseError(Exception):
     pass
+
+
+def is_youtube_url(url: str) -> bool:
+    """
+    Basic validation to ensure the URL is a YouTube URL.
+    Supports: youtube.com, youtu.be, music.youtube.com
+    """
+    youtube_regex = (
+        r'(https?://)?(www\.)?'
+        r'(youtube\.com|youtu\.be|music\.youtube\.com)'
+        r'/(watch\?v=|embed/|v/|shorts/)?[\w-]{11}'
+    )
+    return bool(re.match(youtube_regex, url))
 
 
 def _is_audio_format(fmt: dict[str, Any]) -> bool:
