@@ -14,6 +14,11 @@ env/
 .env.*
 !.env.example
 
+# YouTube Music auth files (never commit)
+oauth.json
+browser.json
+headers_auth.json
+
 # Distribution / packaging
 build/
 dist/
@@ -60,3 +65,5 @@ media/
 
 # uv / pip tools
 .uv/
+
+.build
