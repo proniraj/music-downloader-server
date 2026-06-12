@@ -87,8 +87,8 @@ Response (200):
 {
   "id": "Hc-rc1-hcco",
   "title": "Sauda Iss Dil Ka (From \"Sharma Ji Ki Shaadi\")",
-  "uploader": "...",
-  "channel": "...",
+  "uploader": "Shikhar Saxena",
+  "channel": "Shikhar Saxena",
   "duration": 207.0,
   "thumbnail": "https://i.ytimg.com/vi/Hc-rc1-hcco/maxresdefault.jpg",
   "webpage_url": "https://www.youtube.com/watch?v=Hc-rc1-hcco",
@@ -100,7 +100,7 @@ Response (200):
       "url": "https://...",
       "abr": 139.204,
       "filesize": 3606797,
-      "filesize_approx": 3606780,
+      "filesize_approx": 3606793,
       "acodec": "opus",
       "protocol": "https",
       "http_headers": {
@@ -109,9 +109,79 @@ Response (200):
         "Accept-Language": "..."
       }
     }
-  ]
+  ],
+  "artist": "Shikhar Saxena",
+  "artists": ["Shikhar Saxena"],
+  "album": "Sauda Iss Dil Ka (From \"Sharma Ji Ki Shaadi\")",
+  "track": "Sauda Iss Dil Ka (From \"Sharma Ji Ki Shaadi\")",
+  "categories": ["Music"],
+  "tags": ["Shikhar Saxena", "Sauda Iss Dil Ka (From \"Sharma Ji Ki Shaadi\")"],
+  "genres": [],
+  "description": "Provided to YouTube by Voila Digi Private Limited...",
+  "upload_date": "20240814",
+  "release_date": "20240814",
+  "release_year": 2024,
+  "view_count": 176795,
+  "like_count": 2801,
+  "comment_count": 2,
+  "channel_id": "UC22JFmY2iFixvKJ9KynZ1EA",
+  "channel_url": "https://www.youtube.com/channel/UC22JFmY2iFixvKJ9KynZ1EA",
+  "channel_follower_count": 1670,
+  "channel_is_verified": true,
+  "uploader_id": null,
+  "uploader_url": null,
+  "creator": "Shikhar Saxena",
+  "creators": ["Shikhar Saxena"],
+  "availability": "public",
+  "is_live": false,
+  "live_status": "not_live",
+  "language": null,
+  "age_limit": 0
 }
 ```
+
+#### Response fields
+
+| Field                    | Type            | Description                                                   |
+| ------------------------ | --------------- | ------------------------------------------------------------- |
+| `id`                     | string          | YouTube video ID                                              |
+| `title`                  | string          | Video title                                                   |
+| `uploader`               | string \| null  | Uploader display name                                         |
+| `channel`                | string \| null  | Channel name                                                  |
+| `duration`               | number \| null  | Length in seconds                                             |
+| `thumbnail`              | string \| null  | Best available thumbnail URL                                  |
+| `webpage_url`            | string          | Canonical YouTube watch URL                                   |
+| `recommended_format_id`  | string          | Highest-bitrate audio-only format ID                          |
+| `audio_formats`          | array           | Up to 5 audio-only streams, sorted by bitrate (highest first) |
+| `artist`                 | string \| null  | Primary artist (common on music uploads)                      |
+| `artists`                | string[]        | All artists                                                   |
+| `album`                  | string \| null  | Album name                                                    |
+| `track`                  | string \| null  | Track title                                                   |
+| `categories`             | string[]        | YouTube categories (e.g. `["Music"]`)                         |
+| `tags`                   | string[]        | Video tags                                                    |
+| `genres`                 | string[]        | Genre labels when provided by YouTube (often empty)           |
+| `description`            | string \| null  | Full video description                                        |
+| `upload_date`            | string \| null  | Upload date (`YYYYMMDD`, UTC)                                 |
+| `release_date`           | string \| null  | Release date (`YYYYMMDD`)                                     |
+| `release_year`           | number \| null  | Release year                                                  |
+| `view_count`             | number \| null  | View count                                                    |
+| `like_count`             | number \| null  | Like count                                                    |
+| `comment_count`          | number \| null  | Comment count                                                 |
+| `channel_id`             | string \| null  | Channel ID                                                    |
+| `channel_url`            | string \| null  | Channel URL                                                   |
+| `channel_follower_count` | number \| null  | Subscriber count                                              |
+| `channel_is_verified`    | boolean \| null | Whether the channel is verified                               |
+| `uploader_id`            | string \| null  | Uploader handle or ID when available                          |
+| `uploader_url`           | string \| null  | Uploader profile URL when available                           |
+| `creator`                | string \| null  | Primary creator                                               |
+| `creators`               | string[]        | All creators                                                  |
+| `availability`           | string \| null  | e.g. `public`, `private`, `unlisted`                          |
+| `is_live`                | boolean \| null | Whether the video is a live stream                            |
+| `live_status`            | string \| null  | e.g. `not_live`, `is_live`, `was_live`                        |
+| `language`               | string \| null  | Primary language code when available                          |
+| `age_limit`              | number \| null  | Age restriction in years (`0` = none)                         |
+
+Most metadata fields are optional. YouTube does not provide every field for every video — music-specific fields like `artist` and `album` are most common on official music uploads.
 
 ### Error responses
 
@@ -190,8 +260,9 @@ async function downloadYouTubeAudio(youtubeUrl: string) {
 
 1. Client sends a single YouTube video URL to `POST /api/youtube/parse`.
 2. Server runs yt-dlp with `skip_download=True` to extract metadata only.
-3. Server filters audio-only formats, sorts by bitrate, and returns the top options.
-4. Client downloads directly from the returned `url` using the provided `http_headers`.
+3. Server maps yt-dlp metadata (title, artist, album, tags, stats, etc.) into the response.
+4. Server filters audio-only formats, sorts by bitrate, and returns the top options.
+5. Client downloads directly from the returned `url` using the provided `http_headers`.
 
 ```mermaid
 sequenceDiagram
@@ -202,7 +273,7 @@ sequenceDiagram
     App->>API: POST /api/youtube/parse
     API->>YTDLP: extract_info(download=False)
     YTDLP-->>API: metadata + formats
-    API-->>App: title, thumbnail, audio_formats
+    API-->>App: metadata + audio_formats
     App->>App: download from stream URL
 ```
 
@@ -230,5 +301,7 @@ This URL was tested successfully:
 
 - Parse: `https://youtu.be/Hc-rc1-hcco`
 - Title: _Sauda Iss Dil Ka (From "Sharma Ji Ki Shaadi")_
+- Artist: Shikhar Saxena
+- Category: Music
 - Recommended format: `251` (webm/opus)
 - Direct stream download: works with returned `http_headers`

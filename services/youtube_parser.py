@@ -84,6 +84,18 @@ def _pick_thumbnail(info: dict[str, Any]) -> str | None:
     return None
 
 
+def _str_list(value: Any) -> list[str]:
+    if not value:
+        return []
+    return [str(item) for item in value]
+
+
+def _optional_str(value: Any) -> str | None:
+    if value is None:
+        return None
+    return str(value)
+
+
 def parse_youtube_url(url: str) -> ParseYouTubeResponse:
     logger.info("Starting YouTube extraction: url=%s", url)
 
@@ -140,4 +152,31 @@ def parse_youtube_url(url: str) -> ParseYouTubeResponse:
         webpage_url=webpage_url,
         recommended_format_id=audio_formats[0].format_id,
         audio_formats=audio_formats,
+        artist=safe.get("artist"),
+        artists=_str_list(safe.get("artists")),
+        album=safe.get("album"),
+        track=safe.get("track"),
+        categories=_str_list(safe.get("categories")),
+        tags=_str_list(safe.get("tags")),
+        genres=_str_list(safe.get("genres")),
+        description=safe.get("description"),
+        upload_date=safe.get("upload_date"),
+        release_date=safe.get("release_date"),
+        release_year=safe.get("release_year"),
+        view_count=safe.get("view_count"),
+        like_count=safe.get("like_count"),
+        comment_count=safe.get("comment_count"),
+        channel_id=_optional_str(safe.get("channel_id")),
+        channel_url=_optional_str(safe.get("channel_url")),
+        channel_follower_count=safe.get("channel_follower_count"),
+        channel_is_verified=safe.get("channel_is_verified"),
+        uploader_id=_optional_str(safe.get("uploader_id")),
+        uploader_url=_optional_str(safe.get("uploader_url")),
+        creator=safe.get("creator"),
+        creators=_str_list(safe.get("creators")),
+        availability=safe.get("availability"),
+        is_live=safe.get("is_live"),
+        live_status=safe.get("live_status"),
+        language=safe.get("language"),
+        age_limit=safe.get("age_limit"),
     )
