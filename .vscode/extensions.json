@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",
+    "FastAPILabs.fastapi-vscode",
+    "humao.rest-client",
+    "njpwerner.autodocstring",
+    "tamasfe.even-better-toml"
+  ]
+}

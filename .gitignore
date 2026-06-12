@@ -49,7 +49,6 @@ media/
 
 # IDE & editor
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
