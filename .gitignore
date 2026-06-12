@@ -18,6 +18,7 @@ env/
 oauth.json
 browser.json
 headers_auth.json
+headers.txt
 
 # Distribution / packaging
 build/

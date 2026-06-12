@@ -14,6 +14,11 @@ class HomeRow(BaseModel):
 
 class HomeResponse(BaseModel):
     rows: list[HomeRow]
+    personalized: bool = False
+    auth_mode: str = Field(
+        default="none",
+        description="Auth used for this response: browser, oauth, or none",
+    )
 
 
 class MoodCategory(BaseModel):

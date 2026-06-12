@@ -12,15 +12,23 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/youtube-music", tags=["youtube-music"])
 
 
-def _to_home_response(rows: list[dict[str, Any]]) -> HomeResponse:
+def _sanitize_contents(contents: Any) -> list[dict[str, Any]]:
+    if not isinstance(contents, list):
+        return []
+    return [item for item in contents if isinstance(item, dict)]
+
+
+def _to_home_response(result) -> HomeResponse:
     return HomeResponse(
         rows=[
             HomeRow(
                 title=row.get("title"),
-                contents=row.get("contents") or [],
+                contents=_sanitize_contents(row.get("contents")),
             )
-            for row in rows
-        ]
+            for row in result.rows
+        ],
+        personalized=result.personalized,
+        auth_mode=result.auth_mode,
     )
 
 
@@ -42,17 +50,18 @@ async def fetch_home(
     logger.info("Home request received: limit=%d", limit)
 
     try:
-        rows = await asyncio.to_thread(get_home, limit)
-        logger.info("Home request succeeded: rows=%d", len(rows))
-        return _to_home_response(rows)
+        result = await asyncio.to_thread(get_home, limit)
+        logger.info(
+            "Home request succeeded: rows=%d personalized=%s auth=%s",
+            len(result.rows),
+            result.personalized,
+            result.auth_mode,
+        )
+        return _to_home_response(result)
     except YouTubeMusicError as exc:
         message = str(exc)
         logger.error("Home request failed: error=%s", message)
         raise HTTPException(status_code=502, detail=message) from exc
-    except RuntimeError as exc:
-        message = str(exc)
-        logger.error("Home request failed during client init: error=%s", message)
-        raise HTTPException(status_code=500, detail=message) from exc
 
 
 @router.get("/mood-categories", response_model=MoodCategoriesResponse)
@@ -68,7 +77,3 @@ async def fetch_mood_categories() -> MoodCategoriesResponse:
         message = str(exc)
         logger.error("Mood categories request failed: error=%s", message)
         raise HTTPException(status_code=502, detail=message) from exc
-    except RuntimeError as exc:
-        message = str(exc)
-        logger.error("Mood categories request failed during client init: error=%s", message)
-        raise HTTPException(status_code=500, detail=message) from exc
