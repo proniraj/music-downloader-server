@@ -96,6 +96,21 @@ def _optional_str(value: Any) -> str | None:
     return str(value)
 
 
+def get_youtube_audio_stream(url: str) -> AudioFormat:
+    result = parse_youtube_url(url)
+    stream = next(
+        (
+            fmt
+            for fmt in result.audio_formats
+            if fmt.format_id == result.recommended_format_id
+        ),
+        None,
+    )
+    if not stream:
+        raise YouTubeParseError("No audio stream returned for this URL")
+    return stream
+
+
 def parse_youtube_url(url: str) -> ParseYouTubeResponse:
     logger.info("Starting YouTube extraction: url=%s", url)
 

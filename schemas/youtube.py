@@ -17,6 +17,11 @@ class AudioFormat(BaseModel):
     http_headers: dict[str, str] = Field(default_factory=dict)
 
 
+class StreamYouTubeResponse(BaseModel):
+    url: str
+    http_headers: dict[str, str] = Field(default_factory=dict)
+
+
 class ParseYouTubeResponse(BaseModel):
     id: str
     title: str
