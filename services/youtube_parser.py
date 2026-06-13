@@ -11,11 +11,18 @@ logger = logging.getLogger(__name__)
 
 MAX_AUDIO_FORMATS = 5
 
+# iOS + Android both play AAC (m4a/mp4a) and MP3. WebM/Opus is common on YouTube but
+# not reliably supported on iOS (AVPlayer / expo-av).
+MOBILE_AUDIO_EXTENSIONS = frozenset({"m4a", "mp3"})
+MOBILE_AUDIO_CODEC_PREFIXES = ("mp4a", "aac", "mp3")
+EXCLUDED_AUDIO_EXTENSIONS = frozenset({"webm", "ogg", "opus"})
+EXCLUDED_AUDIO_CODECS = frozenset({"opus", "vorbis"})
+
 YDL_OPTS = {
     "quiet": True,
     "no_warnings": True,
     "skip_download": True,
-    "format": "ba/bestaudio/best",
+    "format": "ba[ext=m4a]/ba[acodec^=mp4a]/ba[ext=mp3]/ba[acodec=mp3]",
 }
 
 
@@ -47,6 +54,36 @@ def _is_audio_format(fmt: dict[str, Any]) -> bool:
         return acodec not in (None, "none")
 
     return acodec not in (None, "none") and vcodec in (None, "none")
+
+
+def _is_mobile_compatible_audio_format(fmt: dict[str, Any]) -> bool:
+    if not _is_audio_format(fmt):
+        return False
+
+    ext = str(fmt.get("ext", "")).lower()
+    acodec = str(fmt.get("acodec", "")).lower()
+
+    if ext in EXCLUDED_AUDIO_EXTENSIONS:
+        return False
+    if acodec in EXCLUDED_AUDIO_CODECS or acodec.startswith("opus"):
+        return False
+
+    if ext in MOBILE_AUDIO_EXTENSIONS:
+        return True
+
+    return any(acodec.startswith(prefix) for prefix in MOBILE_AUDIO_CODEC_PREFIXES)
+
+
+def _select_mobile_audio_formats(formats: list[dict[str, Any]]) -> list[AudioFormat]:
+    compatible_formats = [
+        fmt for fmt in formats if _is_mobile_compatible_audio_format(fmt)
+    ]
+
+    return sorted(
+        (_to_audio_format(fmt) for fmt in compatible_formats),
+        key=lambda fmt: _bitrate({"abr": fmt.abr, "tbr": None}),
+        reverse=True,
+    )[:MAX_AUDIO_FORMATS]
 
 
 def _bitrate(fmt: dict[str, Any]) -> float:
@@ -135,15 +172,20 @@ def parse_youtube_url(url: str) -> ParseYouTubeResponse:
         raise YouTubeParseError("Playlist URLs are not supported. Provide a single video URL.")
 
     formats = safe.get("formats") or []
-    audio_formats = sorted(
-        (_to_audio_format(fmt) for fmt in formats if _is_audio_format(fmt)),
-        key=lambda fmt: _bitrate({"abr": fmt.abr, "tbr": None}),
-        reverse=True,
-    )[:MAX_AUDIO_FORMATS]
+    audio_formats = _select_mobile_audio_formats(formats)
 
     if not audio_formats:
-        logger.error("No audio formats found: url=%s total_formats=%d", url, len(formats))
-        raise YouTubeParseError("No downloadable audio formats found for this URL")
+        total_audio_formats = sum(1 for fmt in formats if _is_audio_format(fmt))
+        logger.error(
+            "No mobile-compatible audio formats found: url=%s total_formats=%d audio_only=%d",
+            url,
+            len(formats),
+            total_audio_formats,
+        )
+        raise YouTubeParseError(
+            "No mobile-compatible audio formats found for this URL. "
+            "Only AAC (m4a) and MP3 streams are supported."
+        )
 
     video_id = str(safe.get("id", ""))
     title = str(safe.get("title") or safe.get("fulltitle") or "Unknown title")
