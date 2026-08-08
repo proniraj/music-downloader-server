@@ -4,6 +4,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 
 from schemas.youtube import (
+    DownloadYouTubeResponse,
     ParseYouTubeRequest,
     ParseYouTubeResponse,
     StreamYouTubeResponse,
@@ -11,6 +12,7 @@ from schemas.youtube import (
 from services.youtube_parser import (
     YouTubeParseError,
     get_youtube_audio_stream,
+    get_youtube_download_audio,
     is_youtube_url,
     parse_youtube_url,
 )
@@ -73,3 +75,38 @@ async def stream_youtube(request: ParseYouTubeRequest) -> StreamYouTubeResponse:
         return StreamYouTubeResponse(url=stream.url, http_headers=stream.http_headers)
     except YouTubeParseError as exc:
         _handle_youtube_error(url, exc, "Stream request")
+
+
+@router.post("/download", response_model=DownloadYouTubeResponse)
+async def download_youtube(request: ParseYouTubeRequest) -> DownloadYouTubeResponse:
+    """
+    Return a direct audio download URL for a YouTube video.
+
+    Prefers MP3 when available; otherwise returns the best mobile-compatible
+    audio (usually m4a/AAC). The client should download from `url` using
+    `http_headers` and save as `filename`.
+    """
+    url = _validate_youtube_url(request.url)
+    logger.info("Download request received: url=%s", url)
+
+    try:
+        stream, title, filename = await asyncio.to_thread(get_youtube_download_audio, url)
+        logger.info(
+            "Download request succeeded: url=%s format_id=%s ext=%s filename=%r",
+            url,
+            stream.format_id,
+            stream.ext,
+            filename,
+        )
+        return DownloadYouTubeResponse(
+            url=stream.url,
+            http_headers=stream.http_headers,
+            ext=stream.ext,
+            title=title,
+            format_id=stream.format_id,
+            abr=stream.abr,
+            filename=filename,
+        )
+    except YouTubeParseError as exc:
+        _handle_youtube_error(url, exc, "Download request")
+

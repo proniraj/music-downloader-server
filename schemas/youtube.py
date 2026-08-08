@@ -22,6 +22,16 @@ class StreamYouTubeResponse(BaseModel):
     http_headers: dict[str, str] = Field(default_factory=dict)
 
 
+class DownloadYouTubeResponse(BaseModel):
+    url: str
+    http_headers: dict[str, str] = Field(default_factory=dict)
+    ext: str
+    title: str
+    format_id: str
+    abr: float | None = None
+    filename: str
+
+
 class ParseYouTubeResponse(BaseModel):
     id: str
     title: str
