@@ -46,6 +46,7 @@ logs/
 # Uploaded media (music files, etc.)
 uploads/
 media/
+media/youtube/
 
 # IDE & editor
 .idea/

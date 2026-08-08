@@ -148,46 +148,6 @@ def get_youtube_audio_stream(url: str) -> AudioFormat:
     return stream
 
 
-def _is_mp3_format(fmt: AudioFormat) -> bool:
-    if fmt.ext.lower() == "mp3":
-        return True
-    acodec = (fmt.acodec or "").lower()
-    return acodec == "mp3" or acodec.startswith("mp3")
-
-
-def _sanitize_filename(title: str, ext: str) -> str:
-    cleaned = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "", title).strip()
-    cleaned = re.sub(r"\s+", " ", cleaned) or "download"
-    return f"{cleaned[:180]}.{ext}"
-
-
-def get_youtube_download_audio(url: str) -> tuple[AudioFormat, str, str]:
-    """
-    Return the best downloadable audio stream for a YouTube URL.
-
-    Prefers native MP3 when YouTube exposes it; otherwise falls back to the
-    recommended mobile-compatible stream (typically m4a/AAC).
-    """
-    result = parse_youtube_url(url)
-
-    stream = next((fmt for fmt in result.audio_formats if _is_mp3_format(fmt)), None)
-    if stream is None:
-        stream = next(
-            (
-                fmt
-                for fmt in result.audio_formats
-                if fmt.format_id == result.recommended_format_id
-            ),
-            None,
-        )
-
-    if not stream:
-        raise YouTubeParseError("No downloadable audio stream returned for this URL")
-
-    filename = _sanitize_filename(result.title, stream.ext)
-    return stream, result.title, filename
-
-
 def parse_youtube_url(url: str) -> ParseYouTubeResponse:
     logger.info("Starting YouTube extraction: url=%s", url)
 

@@ -1,7 +1,8 @@
 import asyncio
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import FileResponse
 
 from schemas.youtube import (
     DownloadYouTubeResponse,
@@ -9,10 +10,10 @@ from schemas.youtube import (
     ParseYouTubeResponse,
     StreamYouTubeResponse,
 )
+from services.youtube_mp3 import download_youtube_as_mp3, get_mp3_file
 from services.youtube_parser import (
     YouTubeParseError,
     get_youtube_audio_stream,
-    get_youtube_download_audio,
     is_youtube_url,
     parse_youtube_url,
 )
@@ -78,35 +79,49 @@ async def stream_youtube(request: ParseYouTubeRequest) -> StreamYouTubeResponse:
 
 
 @router.post("/download", response_model=DownloadYouTubeResponse)
-async def download_youtube(request: ParseYouTubeRequest) -> DownloadYouTubeResponse:
+async def download_youtube(
+    request: Request,
+    body: ParseYouTubeRequest,
+) -> DownloadYouTubeResponse:
     """
-    Return a direct audio download URL for a YouTube video.
-
-    Prefers MP3 when available; otherwise returns the best mobile-compatible
-    audio (usually m4a/AAC). The client should download from `url` using
-    `http_headers` and save as `filename`.
+    Download YouTube audio, convert it to MP3 with ffmpeg, and return a temporary
+    download URL served by this API.
     """
-    url = _validate_youtube_url(request.url)
+    url = _validate_youtube_url(body.url)
     logger.info("Download request received: url=%s", url)
 
     try:
-        stream, title, filename = await asyncio.to_thread(get_youtube_download_audio, url)
+        result = await asyncio.to_thread(download_youtube_as_mp3, url)
+        download_url = str(request.url_for("download_youtube_file", file_id=result["file_id"]))
         logger.info(
-            "Download request succeeded: url=%s format_id=%s ext=%s filename=%r",
+            "Download request succeeded: url=%s file_id=%s filename=%r",
             url,
-            stream.format_id,
-            stream.ext,
-            filename,
+            result["file_id"],
+            result["filename"],
         )
         return DownloadYouTubeResponse(
-            url=stream.url,
-            http_headers=stream.http_headers,
-            ext=stream.ext,
-            title=title,
-            format_id=stream.format_id,
-            abr=stream.abr,
-            filename=filename,
+            url=download_url,
+            ext=result["ext"],
+            title=result["title"],
+            filename=result["filename"],
+            filesize=result["filesize"],
+            expires_in_seconds=result["expires_in_seconds"],
         )
     except YouTubeParseError as exc:
         _handle_youtube_error(url, exc, "Download request")
 
+
+@router.get("/files/{file_id}")
+async def download_youtube_file(file_id: str) -> FileResponse:
+    file_info = get_mp3_file(file_id)
+    if file_info is None:
+        raise HTTPException(status_code=404, detail="MP3 file not found or expired")
+
+    path, filename = file_info
+    logger.info("Serving MP3 file: file_id=%s filename=%r", file_id, filename)
+    return FileResponse(
+        path=path,
+        media_type="audio/mpeg",
+        filename=filename,
+        content_disposition_type="attachment",
+    )

@@ -24,12 +24,11 @@ class StreamYouTubeResponse(BaseModel):
 
 class DownloadYouTubeResponse(BaseModel):
     url: str
-    http_headers: dict[str, str] = Field(default_factory=dict)
-    ext: str
+    ext: str = "mp3"
     title: str
-    format_id: str
-    abr: float | None = None
     filename: str
+    filesize: int | None = None
+    expires_in_seconds: int | None = None
 
 
 class ParseYouTubeResponse(BaseModel):
